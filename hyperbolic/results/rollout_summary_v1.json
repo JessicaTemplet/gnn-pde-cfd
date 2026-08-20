@@ -1,0 +1,11 @@
+{
+  "tag": "v1",
+  "n_test_traj": 15,
+  "n_nan_inf": 0,
+  "n_diverged_gt_20x_true_scale": 0,
+  "rel_err_at_25pct": 0.6743202209472656,
+  "rel_err_at_50pct": 0.7775561213493347,
+  "rel_err_at_final": 0.7963793873786926,
+  "max_pred_magnitude": 2.9744505882263184,
+  "max_true_magnitude": 2.9744505882263184
+}

@@ -1,0 +1,13 @@
+{
+  "method": "cole_hopf_v2_log_phi_gnn",
+  "nu": 0.02,
+  "nu_mismatch": "none -- model trained directly on psi from Burgers' trajectories",
+  "n_test_traj": 15,
+  "n_nan_inf": 0,
+  "n_diverged_gt_20x_true_scale": 0,
+  "rel_err_at_25pct": 0.10548929125070572,
+  "rel_err_at_50pct": 0.12174084037542343,
+  "rel_err_at_final": 0.23657409846782684,
+  "max_pred_magnitude": 2.9744505882263184,
+  "max_true_magnitude": 2.9744505882263184
+}

@@ -1,0 +1,14 @@
+{
+  "method": "cole_hopf_heat_gnn",
+  "nu_burgers": 0.02,
+  "nu_heat_model": 0.01,
+  "nu_mismatch": "heat GNN trained at nu=0.01; Cole-Hopf requires nu=0.02. High modes will under-decay in phi-space -- low-mode dynamics should be less affected.",
+  "n_test_traj": 15,
+  "n_nan_inf": 0,
+  "n_diverged_gt_20x_true_scale": 10,
+  "rel_err_at_25pct": 27.115079879760742,
+  "rel_err_at_50pct": 30.776288986206055,
+  "rel_err_at_final": 63.98122787475586,
+  "max_pred_magnitude": 1160.3526611328125,
+  "max_true_magnitude": 2.9744505882263184
+}

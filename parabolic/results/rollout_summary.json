@@ -1,0 +1,10 @@
+{
+  "n_test_traj": 15,
+  "n_nan_inf": 0,
+  "n_diverged_gt_20x_true_scale": 0,
+  "rel_err_at_25pct": 0.05324792489409447,
+  "rel_err_at_50pct": 0.057389114052057266,
+  "rel_err_at_final": 0.0696006640791893,
+  "max_pred_magnitude": 2.9744505882263184,
+  "max_true_magnitude": 2.9744505882263184
+}
