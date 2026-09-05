@@ -1,0 +1,27 @@
+name: hyperbolic_v4
+stage: hyperbolic
+problem_type: rollout
+pde_class: scalar_hyperbolic
+
+model:
+  module: hyperbolic/scripts/model.py
+  class_name: BurgersStepGNN
+  checkpoint: hyperbolic/models/best_model_v4.pt
+  init_kwargs:
+    node_in_dim: 2
+    edge_in_dim: 2
+    hidden_dim: 16
+    n_layers: 2
+
+data:
+  graph: hyperbolic/data/graph.pt
+  test_traj: hyperbolic/data/test_traj.pt
+  meta: hyperbolic/data/meta.pt
+
+thresholds:
+  divergence_scale_factor: 20.0
+  # 0.3 is roughly the best shipped model's (Cole-Hopf) level -- v4 fixes
+  # the v3 divergence bug but still misses this accuracy bar (README: final
+  # rel L2 = 0.626, residual under-propagation bias) and correctly comes
+  # back "warn", not "pass".
+  max_rel_l2_final: 0.3

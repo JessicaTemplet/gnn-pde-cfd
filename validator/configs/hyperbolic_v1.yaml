@@ -1,0 +1,26 @@
+name: hyperbolic_v1
+stage: hyperbolic
+problem_type: rollout
+pde_class: scalar_hyperbolic
+
+model:
+  module: hyperbolic/scripts/model.py
+  class_name: BurgersStepGNN
+  checkpoint: hyperbolic/models/best_model_v1.pt
+  init_kwargs:
+    node_in_dim: 2
+    edge_in_dim: 2
+    hidden_dim: 16
+    n_layers: 2
+
+data:
+  graph: hyperbolic/data/graph.pt
+  test_traj: hyperbolic/data/test_traj.pt
+  meta: hyperbolic/data/meta.pt
+
+thresholds:
+  divergence_scale_factor: 20.0
+  # 0.3 is roughly the best shipped model's (Cole-Hopf) level -- v1 misses
+  # it badly (README: final rel L2 ~0.80, the shock stalls) and correctly
+  # comes back "warn" (stable, but not accurate), not "pass".
+  max_rel_l2_final: 0.3

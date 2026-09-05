@@ -463,3 +463,108 @@ python generate_dataset.py
 python train.py --fresh --epochs <n> --total-epochs 30
 python evaluate_rollout.py
 ```
+
+## Validator: a configurable check suite across stages
+
+Every stage above already had its own `evaluate.py` / `evaluate_rollout.py`
+doing real validation (rollout divergence, relative-L2 accuracy, the v3
+blow-up catch) -- but each was a bespoke script hardcoded to one model class
+and one data path. `validator/` generalizes that pattern into one
+config-driven tool, instead of rewriting a new evaluate script per
+checkpoint: point it at a model class + checkpoint + dataset via YAML, get
+back the same kind of checks (stability, accuracy, conservation,
+generalization) as a JSON report.
+
+This is deliberately scoped to what this repo actually has, not to every
+possible GNN-PDE setup: two problem types (`rollout` for the time-dependent
+stages, `steady_state` for elliptic), and a small conservation-check
+registry (`validator/checks/conservation.py`) with a real implementation
+only for the Poisson residual that elliptic already trains against --
+future stages (a real CFD stage: incompressible Navier-Stokes, compressible
+flow, RANS) get a new registry entry each, not a redesign.
+
+```
+python -m validator.cli --config validator/configs/parabolic.yaml
+python -m validator.cli --config validator/configs/hyperbolic_cole_hopf_v2.yaml --out validator/results/cole_hopf.json
+python validator/tests/test_checks.py    # check logic, synthetic data, no checkpoints needed
+```
+
+(Run from the repo root, not from `validator/`, since it's invoked as a
+module.) Default output is a plain-English pass/fail summary with an
+explanation of what each failing check probably means (pass `--json` for
+the raw report a tool would want instead). Every config in
+`validator/configs/` reproduces the exact numbers already reported above --
+e.g. `hyperbolic_v3_cautionary.yaml` re-runs the known-blown-up v3 checkpoint
+and correctly comes back `status: "fail"` with `max |pred| = 8.28e+06`,
+matching the blow-up trace recorded in the hyperbolic section. See
+`validator/config.py` for the full config schema and `validator/checks/` for
+each check's implementation.
+
+**This is not tied to the shipped checkpoints.** Every config just points at
+a model class + `init_kwargs` + checkpoint path + dataset -- if you change
+hidden_dim, add layers, swap the architecture, or retrain on different data
+(different viscosity, domain, mesh resolution), write a new YAML pointing at
+the new checkpoint and rerun. The only real constraint is the calling
+convention: either the model exposes `.rollout(u0, pos, edge_index,
+edge_attr, n_steps)` (every stage above does) or, if you change that
+interface, you supply an external adapter function via `rollout_fn` in the
+config (see `hyperbolic_cole_hopf_v2.yaml`, which rolls out in a transformed
+coordinate rather than calling the model's own `.rollout()`). A genuinely
+new PDE class only needs one new entry in `validator/checks/conservation.py`'s
+registry, not a redesign.
+
+### Training a new checkpoint and validating it
+
+Every stage's training script already uses a fixed seed (`SEED` near the top
+of `train.py` / `train_v4.py`), so re-running any of the commands under each
+stage's "Running it" section above reproduces that stage's shipped result
+byte-for-byte. To validate a *new* checkpoint -- one you trained yourself,
+whether reproducing an existing run or with changed hyperparameters/data --
+copy the closest existing config in `validator/configs/`, point `checkpoint`
+(and `init_kwargs`, if the architecture changed) at your new `.pt` file, and
+run it:
+
+```
+cd hyperbolic/scripts
+python train_v4.py --fresh --epochs 20 --total-epochs 20    # produces ../models/best_model_v4.pt
+cd ../..
+python -m validator.cli --config validator/configs/hyperbolic_v4.yaml
+```
+
+The printed summary tells you directly whether anything's wrong -- divergence,
+NaN, an accuracy threshold miss, a conservation-residual violation -- and,
+for each, a short explanation of what that failure mode usually means (see
+`validator/report.py: format_summary`). This is the intended way for someone
+new to GNN-PDE surrogates to get a real answer to "did my training run work"
+without needing to already know what to look for in a loss curve.
+
+### Dashboard: viewing computed results
+
+`GNNPDEValidationUI.jsx` is a self-contained React dashboard (no other
+project files import it) that now loads real computed results instead of
+hand-typed numbers. Regenerate the data after training or re-validating
+anything, then view it:
+
+```
+python -m validator.build_dashboard_data   # writes validator/results/dashboard_data.json
+
+# one-time: bundle the component (needs Node; only re-run this if you edit
+# GNNPDEValidationUI.jsx itself, not after every validator run)
+npx esbuild GNNPDEValidationUI.jsx --loader:.jsx=jsx --jsx=transform --bundle \
+  --format=iife --global-name=GNNPDEBundle --alias:react=./react-global-shim.js \
+  --outfile=dashboard.bundle.js
+
+python -m http.server 8000   # fetch() needs http://, not a file:// URL
+# open http://localhost:8000/index.html
+```
+
+`dashboard.bundle.js` is generated (gitignored) -- only `index.html`,
+`react-global-shim.js`, and `GNNPDEValidationUI.jsx` itself are checked in.
+The dashboard fetches `validator/results/dashboard_data.json` at load time
+and falls back to a frozen offline sample (`FALLBACK_CHECKPOINTS` in the
+JSX) if that fetch fails, so it still renders something useful if you drop
+the component into a different project. The narrative text per checkpoint
+(tagline/note/which checkpoint to compare against) lives in
+`validator/configs/dashboard_meta.yaml`, separate from the computed numbers
+-- add an entry there for any new config you write, or its tagline/note will
+be blank.

@@ -1,0 +1,24 @@
+name: parabolic
+stage: parabolic
+problem_type: rollout
+pde_class: scalar_diffusive
+
+model:
+  module: parabolic/scripts/model.py
+  class_name: HeatStepGNN
+  checkpoint: parabolic/models/best_model.pt
+  init_kwargs:
+    node_in_dim: 2
+    edge_in_dim: 2
+    hidden_dim: 16
+    n_layers: 2
+
+data:
+  graph: parabolic/data/graph.pt
+  test_traj: parabolic/data/test_traj.pt
+  meta: parabolic/data/meta.pt
+
+thresholds:
+  divergence_scale_factor: 20.0
+  # README reports final rel L2 = 0.070 -- flat error curve, dissipative PDE
+  max_rel_l2_final: 0.15

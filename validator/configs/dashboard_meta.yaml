@@ -1,0 +1,72 @@
+# Human-authored narrative for each checkpoint, keyed by config `name`.
+# Numeric metrics/checks/status come from actually running the validator
+# (validator/build_dashboard_data.py) -- this file only supplies the
+# qualitative parts (tagline, note, which checkpoint to overlay against)
+# that can't be honestly derived from numbers alone. Ported from the
+# original hand-typed entries in GNNPDEValidationUI.jsx so nothing here is
+# newly invented; add an entry here for every new config you write.
+
+elliptic:
+  name: "Poisson (elliptic)"
+  tagline: "2D steady-state Poisson on a 32x32 grid, multiscale graph, hard Dirichlet BC."
+  note: >-
+    The network gets each source bump's sign and rough location right but
+    under-predicts how far the true solution spreads: Poisson's Green's
+    function decays slowly, and 2 message-passing layers (even with
+    multiscale shortcuts) only give a coarse approximation of that
+    nonlocal coupling.
+  compareId: null
+
+hyperbolic_v1:
+  name: "Burgers' — v1 naive one-step"
+  tagline: "Plain one-step supervised MSE, no rollout signal during training."
+  note: >-
+    Looks fine by training loss — but the shock steepens then stalls
+    instead of advecting; error climbs to 0.80 within the first fifth of
+    the trajectory and plateaus.
+  compareId: null
+
+hyperbolic_v2:
+  name: "Burgers' — v2 5-step unrolled"
+  tagline: "Warm-started from v1, fine-tuned with a 5-step unrolled rollout loss."
+  note: >-
+    Real, verified improvement: final error drops 0.80 → 0.65, consistent
+    across the whole trajectory. The shock still stalls visibly. Shipped
+    as the stable baseline for this stage.
+  compareId: hyperbolic_v1
+
+hyperbolic_v3_cautionary:
+  name: "Burgers' — v3 over-trained"
+  tagline: "v2 continued 13 more epochs at the same unroll horizon (k=5). Cautionary tale — not shipped."
+  note: >-
+    Training loss kept improving smoothly while the model diverged. A
+    fixed k=5 horizon can't see a per-step amplification of ~1.17x:
+    invisible at 5 steps, catastrophic at 100.
+  compareId: hyperbolic_v2
+
+hyperbolic_v4:
+  name: "Burgers' — v4 curriculum unrolling"
+  tagline: "Unroll horizon k grows 1→15 over training, plus gradient clipping and per-chunk rollout spot checks."
+  note: >-
+    Growing k removes the blind spot that broke v3. Best model trained
+    directly in u-space, though a residual bias toward under-propagation
+    remains.
+  compareId: hyperbolic_v2
+
+hyperbolic_cole_hopf_v2:
+  name: "Burgers' — Cole-Hopf v2 (log-φ)"
+  tagline: "Plain one-step training in a transformed coordinate (psi = log phi) instead of u directly. Best model overall."
+  note: >-
+    4.6x better than v4 at the 25% mark using plain one-step training.
+    psi is the antiderivative of u, so a shock becomes a kink rather than
+    a discontinuity — a smoother, easier target.
+  compareId: hyperbolic_v4
+
+parabolic:
+  name: "Heat equation (control case)"
+  tagline: "Same architecture, graph, and one-step recipe as v1 — on a dissipative PDE instead of Burgers'."
+  note: >-
+    Confirms the hypothesis: diffusion is dissipative, so small per-step
+    errors get smoothed away rather than amplified. Lands 9x lower final
+    error than hyperbolic v4.
+  compareId: hyperbolic_v4

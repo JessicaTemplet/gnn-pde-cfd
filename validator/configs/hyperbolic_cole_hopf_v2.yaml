@@ -1,0 +1,35 @@
+name: hyperbolic_cole_hopf_v2
+stage: hyperbolic
+problem_type: rollout
+pde_class: scalar_hyperbolic
+
+model:
+  module: hyperbolic/scripts/model.py
+  class_name: BurgersStepGNN
+  checkpoint: hyperbolic/models/best_log_phi_model.pt
+  init_kwargs:
+    node_in_dim: 2
+    edge_in_dim: 2
+    hidden_dim: 16
+    n_layers: 2
+
+# Cole-Hopf rolls out in a transformed coordinate (psi = log(phi)) and
+# converts back to u each step -- model.rollout() operates directly in
+# u-space and isn't the right entry point here, so use the external adapter.
+rollout_fn:
+  module: hyperbolic/scripts/cole_hopf_v2_rollout.py
+  function: rollout
+
+# this adapter's to_psi/to_u do 1D FFTs on u0 directly (torch.fft.rfft along
+# the last axis), so it needs plain (nx,), not (nx, 1) like model.rollout()
+rollout_u0_shape: N
+
+data:
+  graph: hyperbolic/data/graph.pt
+  test_traj: hyperbolic/data/test_traj.pt
+  meta: hyperbolic/data/meta.pt
+
+thresholds:
+  divergence_scale_factor: 20.0
+  # README reports final rel L2 = 0.237 -- best model, gate close to that
+  max_rel_l2_final: 0.30

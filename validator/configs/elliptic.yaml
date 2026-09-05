@@ -1,0 +1,24 @@
+name: elliptic
+stage: elliptic
+problem_type: steady_state
+pde_class: elliptic_poisson
+
+model:
+  module: elliptic/scripts/model.py
+  class_name: EllipticGNN
+  checkpoint: elliptic/models/best_model.pt
+  init_kwargs:
+    node_in_dim: 5
+    edge_in_dim: 3
+    hidden_dim: 20
+    n_layers: 2
+
+data:
+  test_set: elliptic/data/test.pt
+  grid_meta: elliptic/data/grid_meta.pt
+
+thresholds:
+  # reported mean is 0.74 (README) -- loose enough not to false-fail on
+  # this known, already-analyzed result, tight enough to catch a real regression
+  max_rel_l2_final: 1.0
+  max_mean_conservation_residual: 0.1
